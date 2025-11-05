@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Karavan Dostu Duraklar – Antalya Pilot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    :root {
+      --green: #00695c;
+      --light: #f3f5f6;
+      --border: #d1d9de;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #fff;
+    }
+    header {
+      background: var(--green);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      gap: 10px;
+    }
+    header h1 {
+      font-size: 1rem;
+      margin: 0;
+      font-weight: 600;
+    }
+    .brand {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      white-space: nowrap;
+    }
+    .lang-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #fff;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .container {
+      display: flex;
+      height: calc(100vh - 48px);
+    }
+    #map {
+      flex: 1;
+      min-height: 300px;
+    }
+    .sidebar {
+      width: 350px;
+      border-left: 1px solid var(--border);
+      background: #fff;
+      overflow-y: auto;
+    }
+    .place-card {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      gap: 10px;
+    }
+    .place-card:hover { background: #f7f9f9; }
+    .thumb {
+      width: 70px;
+      height: 55px;
+      background: #ddd;
+      border-radius: 6px;
+      background-size: cover;
+      background-position: center;
+      flex-shrink: 0;
+    }
+    .place-info h3 {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+    .place-info .loc {
+      font-size: 0.7rem;
+      color: #555;
+      margin-top: 3px;
+    }
+    .tags {
+      margin-top: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .tag {
+      background: #e5f3ef;
+      color: #05473f;
+      border-radius: 999px;
+      padding: 1px 6px;
+      font-size: 0.6rem;
+    }
+
+    /* 📱 Mobil görünüm */
+    @media (max-width: 900px) {
+      .container { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        height: 45vh;
+      }
+      #map {
+        height: 55vh;
+      }
+      header h1 { max-width: 60%; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="title">Karavan Dostu Duraklar – Antalya Pilot</h1>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <div class="brand">Serdar Kencebay Koleksiyonu</div>
+      <button id="langToggle" class="lang-btn">EN</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="map"></div>
+    <aside class="sidebar" id="list"></aside>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    // 📍 Durak verileri
+    const places = [
+      {
+        id: 1,
+        name_tr: "Kaş Patara Karavan Alanı",
+        name_en: "Kaş Patara Caravan Site",
+        coords: [36.279, 29.319],
+        district_tr: "Patara / Kaş / Antalya",
+        district_en: "Patara / Kaş / Antalya",
+        tags_tr: ["Deniz kenarı", "Duş", "Elektrik"],
+        tags_en: ["Seaside", "Shower", "Electric"],
+        img: "https://via.placeholder.com/120x90?text=Patara"
+      },
+      {
+        id: 2,
+        name_tr: "Kemer Çamyuva Kamp – Karavan",
+        name_en: "Kemer Çamyuva Camp – Caravan",
+        coords: [36.563, 30.557],
+        district_tr: "Çamyuva / Kemer / Antalya",
+        district_en: "Çamyuva / Kemer / Antalya",
+        tags_tr: ["Elektrik", "Su", "Güvenlik"],
+        tags_en: ["Electric", "Water", "Security"],
+        img: "https://via.placeholder.com/120x90?text=Kemer"
+      },
+      {
+        id: 3,
+        name_tr: "Beldibi – Çifteçeşmeler Kamp & Karavan",
+        name_en: "Beldibi – Çifteçeşmeler Camp & Caravan",
+        coords: [36.711, 30.561],
+        district_tr: "Beldibi / Kemer / Antalya",
+        district_en: "Beldibi / Kemer / Antalya",
+        tags_tr: ["Denize yakın"],
+        tags_en: ["Near sea"],
+        img: "https://via.placeholder.com/120x90?text=Beldibi"
+      },
+      {
+        id: 4,
+        name_tr: "Olimpos Bungalov Tesis (Karavan Kabul)",
+        name_en: "Olympos Bungalow Site (Caravan Friendly)",
+        coords: [36.396, 30.471],
+        district_tr: "Olimpos / Kumluca",
+        district_en: "Olympos / Kumluca",
+        tags_tr: ["Duş", "WC"],
+        tags_en: ["Shower", "WC"],
+        img: "https://via.placeholder.com/120x90?text=Olympos"
+      },
+      {
+        id: 5,
+        name_tr: "Adrasan Küçük Otel / Pansiyon (Karavan)",
+        name_en: "Adrasan Small Hotel / Pension (Caravan)",
+        coords: [36.303, 30.471],
+        district_tr: "Adrasan / Kumluca",
+        district_en: "Adrasan / Kumluca",
+        tags_tr: ["Otopark"],
+        tags_en: ["Parking"],
+        img: "https://via.placeholder.com/120x90?text=Adrasan"
+      }
+    ];
+
+    let currentLang = "tr";
+    const map = L.map("map").setView([36.85, 30.8], 7.3);
+
+    // Harita katmanı
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    const markers = {};
+
+    function renderList() {
+      const listEl = document.getElementById("list");
+      listEl.innerHTML = "";
+      places.forEach(place => {
+        const card = document.createElement("div");
+        card.className = "place-card";
+        card.dataset.id = place.id;
+
+        const thumb = document.createElement("div");
+        thumb.className = "thumb";
+        thumb.style.backgroundImage = `url(${place.img})`;
+
+        const info = document.createElement("div");
+        info.className = "place-info";
+
+        const title = document.createElement("h3");
+        title.textContent = currentLang === "tr" ? place.name_tr : place.name_en;
+
+        const loc = document.createElement("div");
+        loc.className = "loc";
+        loc.textContent = currentLang === "tr" ? place.district_tr : place.district_en;
+
+        const tags = document.createElement("div");
+        tags.className = "tags";
+        const tagArr = currentLang === "tr" ? place.tags_tr : place.tags_en;
+        tagArr.forEach(t => {
+          const span = document.createElement("span");
+          span.className = "tag";
+          span.textContent = t;
+          tags.appendChild(span);
+        });
+
+        info.appendChild(title);
+        info.appendChild(loc);
+        info.appendChild(tags);
+
+        card.appendChild(thumb);
+        card.appendChild(info);
+        listEl.appendChild(card);
+
+        card.addEventListener("click", () => {
+          focusOnPlace(place.id);
+        });
+      });
+    }
+
+    function renderMarkers() {
+      places.forEach(place => {
+        const marker = L.marker(place.coords).addTo(map);
+        marker.bindPopup(`
+          <b>${currentLang === "tr" ? place.name_tr : place.name_en}</b><br/>
+          ${currentLang === "tr" ? place.district_tr : place.district_en}<br/>
+          <small>${(currentLang === "tr" ? place.tags_tr : place.tags_en).join(" • ")}</small>
+        `);
+        markers[place.id] = marker;
+      });
+    }
+
+    function focusOnPlace(id) {
+      const place = places.find(p => p.id === id);
+      if (!place) return;
+      map.setView(place.coords, 11);
+      markers[id].openPopup();
+    }
+
+    document.getElementById("langToggle").addEventListener("click", () => {
+      currentLang = currentLang === "tr" ? "en" : "tr";
+      document.getElementById("title").textContent =
+        currentLang === "tr"
+          ? "Karavan Dostu Duraklar – Antalya Pilot"
+          : "Caravan-Friendly Stops – Antalya Pilot";
+      document.getElementById("langToggle").textContent =
+        currentLang === "tr" ? "EN" : "TR";
+      Object.keys(markers).forEach(k => {
+        map.removeLayer(markers[k]);
+        delete markers[k];
+      });
+      renderMarkers();
+      renderList();
+    });
+
+    renderMarkers();
+    renderList();
+  </script>
+</body>
+</html>
